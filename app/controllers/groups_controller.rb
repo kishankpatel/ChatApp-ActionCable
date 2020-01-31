@@ -1,5 +1,5 @@
 class GroupsController < ApplicationController
-  before_filter :encrypt_group_id, :only => [:show]
+  before_action :encrypt_group_id, :only => [:show]
   def new
   	@group = Group.new
   end

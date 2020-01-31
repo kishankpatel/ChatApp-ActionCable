@@ -1,5 +1,5 @@
 class UsersController < ApplicationController
-  before_filter :encrypt_id, :only => [:show, :block, :unblock]
+  before_action :encrypt_id, :only => [:show, :block, :unblock]
   def my_contacts
     @users = current_user.conversations.map{|c| c.opposed_user(current_user) if( c.opposed_user(current_user).email.downcase.include?(params[:query].downcase) || c.opposed_user(current_user).full_name.downcase.include?(params[:query].downcase) )}[0..5]
     render :json => @users
