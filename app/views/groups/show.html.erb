@@ -1,0 +1,257 @@
+<div class="panel panel-default group_container" data-conversation-id="<%= @group.id %>" id = group_<%=@group.id%>>
+  <div class="panel-heading">
+    <div class="fl">
+      <img src=<%= @group.images.present? && @group.images.last.image.url.present? ? @group.images.order("id").last.image.url(:thumb) : "/assets/group_icon.png"%> class='pf_img1 group_img' data-id = <%=@group.id%>  >
+      <%= link_to "javascript:void(0)", :class => "group_info" do %>
+        <span><%=@group.name%></span>
+      <%end%>
+    </div>  
+    <div class="fr">
+      <div class="dropdown">
+        <a href="javascript:void(0)" class="dropdown-toggle" data-toggle="dropdown">
+          <img src="/assets/more_icon.png" alt=":" class="more_icon">
+        </a>
+        <ul class="dropdown-menu dropdown-menu-right">
+          <li>
+            <%= link_to "javascript:void(0)", :class => "edit_group", "data-id" => @group.id do %>
+              <span class="glyphicon glyphicon-pencil"></span>
+              Edit
+            <%end%> 
+          </li>
+        </ul>
+      </div>
+    </div>
+    <div class="cb"></div>
+    <div class="show_group_info">
+      <div class="user_list">
+        <%if @group.user_groups.where(:user_id => current_user.id).first.is_admin%>
+          <a href="javascript:void(0)" class="add_user" data-toggle="modal" data-target="#userList">+ Add User</a>
+        <%end%>
+        <hr>
+        <%@group.users.where("user_id != ?", current_user.id).each do |user|%>
+          <div>
+            <div class="fl">
+              <a href="/conversations/<%=encode_id(user.id)%>">
+                <div class="user_profile" title=<%=user.email%>>
+                  <%=user.email[0].upcase%>
+                </div>
+                <div class="user_name">
+                  <%=user.email%>
+                </div>
+                <div class="cb"></div>
+              </a>
+            </div>
+            <div class="fr">
+              <% if user.user_groups.where(:group_id => @group.id ).first.is_admin %>
+                <div class="admin_txt">
+                  Admin
+                </div>
+              <%end%>
+              <% if current_user.user_groups.where(:group_id => @group.id ).first.is_admin && current_user != user %>
+                <div class="dropdown admin_action">
+                  <a href="javascript:void(0)" class="dropdown-toggle" data-toggle="dropdown">
+                    <img src="/assets/more_icon.png" alt=":" class="more_icon">
+                  </a>
+                  <ul class="dropdown-menu dropdown-menu-right">
+                    <li>
+                      <%if user.user_groups.where(:group_id => @group.id ).first.is_admin%>
+                        <a href="/user_groups/<%= @group.id%>/revoke_admin/<%=user.id%>">Revoke admin</a>
+                      <%else%>
+                        <a href="/user_groups/<%= @group.id%>/make_admin/<%=user.id%>">Make group admin</a>
+                      <%end%>
+                    </li>
+                  </ul>
+                </div>
+              <%end%>
+
+            </div>
+            <div class="cb"></div>
+          </div>
+        <%end%>
+        <div>
+          <div class="fl">
+            <a href="/users/profile">
+              <div class="user_profile" title=<%=current_user.email%>>
+                <%=current_user.email[0].upcase%>
+              </div>
+              <div class="user_name">
+                <%=current_user.email%>
+                <%= "(You)"%>
+              </div>
+              <div class="cb"></div>
+            </a>
+          </div>
+          <div class="fr">
+            <% if current_user.user_groups.where(:group_id => @group.id ).first.is_admin %>
+              <div class="admin_txt">
+                Admin
+              </div>
+            <%end%>
+          </div>
+          <div class="cb"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel-body">
+    <div class="messages-list">
+      <ul>
+        <%= render 'groups/conversation_content', group_messages: @group_messages %>
+      </ul>
+    </div>
+    <%= form_for @group.group_messages.new, remote: true do |f| %>
+      <%= hidden_field_tag "group_message[group_id]", @group.id, id:"group_id" %>
+      <div class="send_message_container emoji-picker-container">
+        <%= f.text_area :body, class: "text_area autoExpand", :row => '1', "data-min-rows" => '1', data: { emojiable: true }  %>
+        <img src="/assets/right_arrow.jpg" alt="=>" class="send" onclick="submitForm(this)">
+        <%= f.submit "Send", class: "send_msg_btn" %>
+      </div>
+    <% end %>
+  </div>
+</div>
+
+<div class="modal fade" id="userList" role="dialog">
+  <div class="modal-dialog">
+    <!-- Modal content-->
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal">&times;</button>
+        <h4 class="modal-title">Add User</h4>
+      </div>
+      <div class="modal-body">
+        <div class="add_user_sec">
+          <div>
+            <%= form_for(UserGroup.new, url: "/user_groups/create", html: { method: :post }) do |f| %>
+              <%= f.hidden_field :user_id%>
+              <%= text_field_tag :my_contacts,"", :required => true, :id => "my_contacts", :placeholder => "Search user..."%>
+              <%= hidden_field_tag "user_group[group_id]", @group.id %>
+              <div style="margin-top:10px;">
+                <%=f.submit :"Add User", :class => "btn btn-success"%>
+              </div>
+            <% end %>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+  </div>
+</div> 
+<div class="modal fade" id="editGroup" role="dialog"></div>   
+  
+<script type="text/javascript">
+  $(".edit_group").click(function(){
+    var id = $(this).data("id");
+    $.ajax({
+      type: "GET",
+      url: "/groups/edit/"+id,
+      success: function(data) {
+        $("#editGroup").html(data).modal("show");
+      },
+      error: function(data){
+        alert("Got an error on edit method.!!!");
+      }
+    });
+  })
+  var contact_options = {
+    url: function(val) {
+      return "/my_contacts?query=" + val;
+    },
+    getValue: "email",
+    template: {
+        type: "description",
+        fields: {
+            description: "first_name"  
+        }
+    },
+    list: {
+        // maxNumberOfElements: 10,
+        match: {
+            enabled: true
+        },
+        onClickEvent: function() {
+          var value = $("#my_contacts").getSelectedItemData().id;
+          console.log(value);
+          $("#user_group_user_id").val(value);
+        }
+    },
+
+    theme: "plate-light"
+  };
+
+  $("#my_contacts").easyAutocomplete(contact_options);
+
+  $(".group_info").on('click', function(){
+    $(".user_list").slideToggle();
+  })
+
+
+  var messages_list = $('.messages-list');
+  var height = messages_list[0].scrollHeight;
+  messages_list.scrollTop(height);
+  var text_area;
+  var sender_id = "";
+  App.group_chat = App.cable.subscriptions.create("GroupChatChannel", {
+    connected: function() {},
+    disconnected: function() {},
+    received: function(data) {
+      var is_active = true;
+      $(window).focus(function() {
+        is_active = true;
+        console.log(true);
+      });
+
+      $(window).focusout(function() {
+        is_active = false;
+        console.log(true);
+      });
+      if(data['sender_id'] != "<%=current_user.id%>"){
+        if ("Notification" in window) {
+          if (Notification.permission === "granted") {
+            if((data['message'].length) > 30){
+              var data_message = data['message'].substring(0, 30) + "..."
+            }else{
+              var data_message = data['message'];
+            }
+            var options = {
+              body: data_message,
+              icon: "/assets/profile_icon.png",
+              dir : "ltr"
+            };
+            var notification = new Notification("New message from: "+data['email'],options);
+          }
+        }
+        $("#group_"+data['group_id']).find('.messages-list ul').append("<li><div class='user_profile' title='"+data['email']+"'>"+data['email'].charAt(0)+"</div><div class='message-received'>" + data['message'].replace(/\n/g, "<br />") + "</div><div class='clearfix'></div></li>");
+        var messages_list = $("#group_"+data['group_id']).find('.messages-list');
+        var height = messages_list[0].scrollHeight;
+        messages_list.scrollTop(height);
+        return;
+      }
+    },
+    conversation: function(message, group_id, sender_id) {
+      return this.perform('conversation', {
+        message: message,
+        group_id: group_id,
+        sender_id: sender_id
+      });
+    }
+  });
+
+
+  function submitForm(obj) {
+    text_area = $(obj).closest("form").find(".text_area");
+    var msg = text_area.val().trim();
+    var recipient_id = $(obj).closest("form").find(".recipient_id").val();
+    var group_id = $(obj).closest("form").find("#group_id").val();
+    var sender_id = "<%=current_user.id%>";
+    if( msg.length != 0){
+      $(obj).closest("form").submit();
+      sender_id = "<%=current_user.id%>";
+      App.group_chat.conversation(msg, group_id, sender_id );
+      $("textarea").css("height","32px");
+    }else{
+      text_area.focus();
+    }
+  }
+
+</script>

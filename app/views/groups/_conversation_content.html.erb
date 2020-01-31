@@ -1,0 +1,14 @@
+<% group_messages.each do |message| %>
+  <li>
+    <div class="<%= current_user.id == message.user_id ? 'message-sent' : 'message-received' %>">
+		<%if current_user.id != message.user_id%>    
+			<%user = message.user%>
+		    <a href="/conversations/<%=encode_id(user.id)%>" title=<%=user.email%>>
+			    <%=user.email.truncate(30)%>
+		    </a>
+		<%end%>
+        <%= content_with_emoji(simple_format(message.body)) %>
+    </div>
+    <div class="clearfix"></div>
+  </li>
+<% end %>
